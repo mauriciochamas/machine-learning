@@ -1,0 +1,71 @@
+#CARET package
+# We have to predict the Loan Status of a person based on his/ her profile
+library("caret")
+str(train)
+sum(is.na(train))
+summary(train)
+preProcValues <- preProcess(train,method = c("knnImpute","center","scale"))
+preProcValues
+library("RANN")
+train_processed <- predict(preProcValues,train)
+sum(is.na(train_processed))
+train_processed$Loan_Status <- ifelse(train_processed$Loan_Status=="N",0,1)
+id <- train_processed$Loan_ID
+train_processed$Loan_ID <- NULL
+str(train_processed)
+#Converting every categorical variable to numerical using dummy variables
+dmy <- dummyVars("~.",data = train_processed,fullRank = T)
+train.transformed <- data.frame(predict(dmy,newdata = train_processed))
+str(train.transformed)
+train.transformed$Loan_Status <- as.factor(train.transformed$Loan_Status)
+str(train.transformed)
+index <- createDataPartition(train.transformed$Loan_Status,p=0.75,list = F)
+trainSet <- train.transformed[index,]
+testSet <- train.transformed[-index,]
+str(trainSet)
+#Feature selection using Caret
+control <- rfeControl(functions = rfFuncs,method = "repeatedcv",repeats = 3,verbose = F)
+outcomeName <- "Loan_Status"
+predictors <- names(trainSet)[!names(trainSet)%in%outcomeName]
+predictors
+Loan_Pred_Profile <- rfe(trainSet[,predictors],trainSet[,outcomeName],rfeControl = control)
+predictors <- c("Credit_History", "CoapplicantIncome", "Property_Area.Semiurban", "LoanAmount", "ApplicantIncome")
+#Training models using CARET
+names(getModelInfo())
+model_gbm <- train(trainSet[,predictors],trainSet[,outcomeName],method="gbm")
+model_rf <- train(trainSet[,predictors],trainSet[,outcomeName],method="rf")
+model_nnet <- train(trainSet[,predictors],trainSet[,outcomeName],method="nnet")
+model_glm <- train(trainSet[,predictors],trainSet[,outcomeName],method="glm")
+fitControl <- trainControl(method = "repeatedCV",number = 5,repeats = 5)
+modelLookup(model = "gbm")
+#creating grid
+grid <- expand.grid(n.trees=c(10,20,50,100,500,1000),shrinkage=c(0.01,0.05,0.1,0.5),n.minobsinnode=c(3,5,10),interaction.depth=c(1,5,10))
+model_gbm <- train(trainSet[,predictors],trainSet[,outcomeName],method="gbm",trControl=fitControl,tuneGrid=grid)
+model_gbm
+plot(model_gbm)
+#using tune length
+model_gbm <- train(trainSet[,predictors],trainSet[,outcomeName],method="gbm",trControl=fitControl,tuneLength=10)
+model_gbm
+plot(model_gbm)
+#Variable Importance
+varImp(object = model_gbm)
+plot(varImp(object = model_gbm),main="GBM-Variable Importance")
+varImp(object = model_rf)
+plot(varImp(object = model_rf),main="RF-Variable Importance")
+varImp(object = model_nnet)
+plot(varImp(object = model_nnet),main="NNET-Variable Importance")
+varImp(object = model_glm)
+plot(varImp(object = model_glm),main="NNET-Variable Importance")
+#Predictions
+pred <- predict.train(object = model_gbm,testSet[,predictors],type = "raw")
+table(pred)
+confusionMatrix(pred,testSet[,outcomeName])
+pred <- predict.train(object = model_rf,testSet[,predictors],type = "raw")
+table(pred)
+confusionMatrix(pred,testSet[,outcomeName])
+pred <- predict.train(object = model_nnet,testSet[,predictors],type = "raw")
+table(pred)
+confusionMatrix(pred,testSet[,outcomeName])
+pred <- predict.train(object = model_glm,testSet[,predictors],type = "raw")
+table(pred)
+confusionMatrix(pred,testSet[,outcomeName])
