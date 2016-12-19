@@ -1,0 +1,100 @@
+#DECISION TREES
+#iris
+library(ggplot2)
+library(rpart)
+library(caret)
+library(rattle)
+data(iris)
+summary(iris)
+qplot(Petal.Length,Petal.Width,colour=Species,data = iris)
+split <- createDataPartition(y=iris$Species,p=0.7,list = F)
+train <- iris[split,]
+test <- iris[-split,]
+#caTools
+#split=split(Dep var,SplitRatio=0.7)
+#train=subset(data,split==TRUE)
+#test=subset(data=split==FALSE)
+
+#Building a CART model, classification problem
+modfit <- train(Species~.,method="rpart",data=train)
+fancyRpartPlot(modfit$finalModel)
+#Validating the model 
+train.cart <- predict(modfit,newdata = train)
+table(train.cart,train$Species)
+table(train$Species)
+pred <- predict(modfit,newdata = test)
+table(pred,test$Species)
+#visualize the cases for which the prediction went wrong
+correct <- pred==test$Species
+qplot(Petal.Length,Petal.Width,colour=correct,data = test)
+#Results
+#Misclassification rate in training data = 6/105
+#Misclassification rate in validation data = 1/105
+#Building  a Random forest model 
+library(randomForest)
+library(randomForestSRC)
+library(caret)
+library(party)
+library(tree)
+library(reprtree)
+modfit <- train(Species~ .,method="rf",data=training)
+pred <- predict(modfit,train)
+table(pred,train$Species)
+#Misclassification rate in training data = 0/105 
+#Validating the model 
+pred <- predict(modfit,newdata = test)
+table(pred,test$Species)
+#Misclassification rate = 0/105
+#Comparison between the two models
+#3 criterion
+#1. Stability : The model should have similar performance metrics across both training 
+#and validation. This is very essential because business can live with a lower accuracy but 
+#not with a lower stability. We will give the highest weight to stability. For this case let’s 
+#take it as 5.
+#2. Performance on Training data : This is one of the important metric but nothing conclusive 
+#can be said just based on this metric. This is because an over fit model is unacceptable but 
+#will get a very high score at this parameter. Hence, we will give a low weight to this 
+#parameter (say 2).
+#3. Performance on Validation data : This metric catch holds of overfit model and hence is an 
+#important metric. We will score it higher than performance and lower than stability. For this 
+#case let’s take it as 3.
+cforest(Species ~ ., data=iris, controls=cforest_control(mtry=2, mincriterion=0))
+getTree(modfit$finalModel,1,labelVar = T)
+treepl
+fancyRpartPlot(modfit$finalModel)
+#BOSTON
+library(rpart)
+library(rpart.plot)
+library(party)
+library(caret)
+bos <- boston
+names(bos)
+split <- createDataPartition(y=bos$MEDV,p=0.7,list = F)
+train <- bos[split,]
+test <- bos[-split,]
+tree <- rpart(MEDV~LAT+LON,data = train)
+prp(tree)
+tree <- rpart(MEDV~LAT+LON,data = train,minbucket=50)
+plot(tree)
+text(tree)
+prp(tree)
+tree <- rpart(MEDV~LAT+LON+CRIM+ZN+INDUS+CHAS+NOX+RM+AGE+DIS+RAD+TAX+PTRATIO, data =bos )
+prp(tree)
+predicted <- predict(tree,test)
+#Random Forest
+library(randomForest)
+fit <- randomForest(MEDV~LAT+LON+CRIM+ZN+INDUS+CHAS+NOX+RM+AGE+DIS+RAD+TAX+PTRATIO,bos,ntree=500)
+summary(fit)
+predicted <- predict(fit,test)
+#GBM in R
+library(caret)
+fitControl <- trainControl(method = "cv", number = 10)
+#fitControl <- trainControl(method = "cv", number = 10,#5folds )
+tune_Grid <- expand.grid(interaction.depth=2,n.trees=500,shrinkage=0.1,n.minobsinnode=10)
+set.seed(825)
+bos <- boston
+split <- createDataPartition(y=bos$MEDV,p=0.7,list = F)
+train <- bos[split,]
+test <- bos[-split,]
+fit <- train(MEDV~., data=train,method="gbm",trControl=fitControl, verbose=F,tuneGrid=tune_Grid)
+predicted <- predict(fit,test,type="prob")[,2]
