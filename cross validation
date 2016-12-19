@@ -1,0 +1,27 @@
+library(plyr)
+library(dplyr)
+library(randomForest)
+data <- iris
+glimpse(data)
+k=20
+data$id <- sample(1:k,nrow(data),replace = T)
+list <- 1:k
+prediction <- data.frame()
+testsetCopy <- data.frame()
+#Creating a progress bar to know the status of CV
+progress.bar <- create_progress_bar("text")
+progress.bar$init(k)
+#function for k fold
+for(i in 1:k){
+  train <- subset(data, id %in% list[-i])
+  test <- subset(data, id %in% c(i))
+  mod <- randomForest(train$Sepal.Length~.,data=train,ntree=1000)
+  temp <- as.data.frame(predict(mod,test[,-1]))
+  prediction <- rbind(prediction,temp)
+  testsetCopy <- rbind(testsetCopy,as.data.frame(test[,1]))
+  progress.bar$step()
+}
+result <- cbind(prediction,testsetCopy[,1])
+names(result) <- c("Predicted","Actual")
+result$Difference1 <- abs(result$Actual-result$Predicted)
+print(x <- summary(result$Difference1))
