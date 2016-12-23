@@ -1,0 +1,42 @@
+big <- Train_UWu5bXk
+loan <- train_gbW7HTd
+hunt <- train
+summary(loan)
+table(is.na(train))
+colSums(is.na(loan))
+colSums(is.na(big))
+colSums(is.na(hunt))
+md.pattern(train)
+#MICE
+library(mice)
+imputed.data <- mice(train,m=5,maxit = 50,method = "pmm", seed = 500)
+summary(imputed.data)
+#Amelia
+library(Amelia)
+amelia_fit <- amelia(big,m=5,parallel = "multicore",noms = "Item_Outlet_Sales")
+amelia_fit <- amelia(loan,m=5,parallel = "multicore",noms = "Income.Group", idvars = c("Workclass", "Education", "Marital.Status", "Occupation", "Relationship", "Race", "Sex", "Native.Country"))
+amelia_fit <- amelia(hunt,m=5,parallel = "multicore",noms = "Footfall",idvars = "Date")
+library(missForest)
+imputed <- missForest(big)
+imputed <- missForest(loan)
+head(imputed$ximp)
+head(loan)
+imputed <- missForest(hunt)
+#HMISC
+library(Hmisc)
+mean(hunt$Max_Breeze_Speed,na.rm=T)
+hunt$imput <- with(hunt,impute(Max_Breeze_Speed,"random"))
+hunt$Max_Breeze_Speed <- with(hunt,impute(Max_Breeze_Speed,"random"))
+hunt$Max_Breeze_Speed <- with(hunt,impute(Max_Breeze_Speed,mean))
+table(is.na(hunt$Max_Breeze_Speed))
+big$imputed <- with(big,impute(Item_Weight,"random"))
+big$imputed <- with(big,impute(Item_Weight,mean))
+fivenum(big$Item_Weight,na.rm = T)
+fivenum(big$imputed)
+#argImpute
+impute.arg <- aregImpute(~ Direction_Of_Wind+Average_Breeze_Speed, data = hunt,n.impute=3)
+impute.arg
+#mi
+library(mi)
+imput <- mi(hunt,seed=123)
+imput
