@@ -1,0 +1,158 @@
+path <- "C:/Users/Usuario/Documents/cursos/Data Analysis/hackathons/black friday"
+setwd(path)
+train <- read.csv("train.csv")
+test <- read.csv("test.csv")
+btrain <- train[1:8523,]
+btest <- test[1:5681,]
+table(is.na(btrain))
+prop.table(table(is.na(btrain)))
+colSums(is.na(btrain))
+prop.table(table(is.na(btrain)))
+prop.table(table(is.na(btrain$Product_Category_2)))
+prop.table(table(is.na(btrain$Product_Category_3)))
+summary(btrain)
+str(btrain)
+#PLOT
+library(ggplot2)
+names(btrain)
+ggplot(btrain,aes(x=Gender,y=Purchase))+geom_boxplot()+ggtitle("Gender&Purchase")
+ggplot(btrain,aes(x=Age,y=Purchase))+geom_boxplot()
+ggplot(btrain,aes(x=Age,y=Purchase))+geom_dotplot()
+table(btrain$Occupation)
+ggplot(btrain,aes(x=Occupation,y=Purchase))+geom_bar(stat = "identity")
+ggplot(btrain,aes(x=City_Category,y=Purchase))+geom_bar(stat = "identity")
+ggplot(btrain,aes(x=Marital_Status,y=Purchase))+geom_bar(stat = "identity")
+ggplot(btrain,aes(x=Stay_In_Current_City_Years,y=Purchase))+geom_bar(stat = "identity")
+library(RColorBrewer)
+hist(btrain$Purchase,breaks=10,col=brewer.pal(9,"Blues"))
+hist(btrain$Product_Category_1,breaks=10,col=brewer.pal(9,"Blues"))
+hist(btrain$Product_Category_2,breaks=10,col=brewer.pal(9,"Blues"))
+hist(btrain$Product_Category_3,breaks=10,col=brewer.pal(9,"Blues"))
+barplot(table(btrain$Gender,btrain$Occupation),col=brewer.pal(3,"Set1"),legend.text = T)
+barplot(table(btrain$Gender,btrain$Age),col=brewer.pal(3,"Set1"),legend.text = T)
+boxplot(btrain$Purchase~btrain$City_Category,col=topo.colors(3))
+boxplot(btrain$Purchase~btrain$Marital_Status,col=topo.colors(3))
+plot(x=btrain$Product_Category_1,y=btrain$Purchase)
+hist(btrain$Product_Category_3)
+plot(btrain,col=brewer.pal(9,"Blues"))
+btest$Purchase <- 1
+summary(btest)
+total <- rbind(btrain,btest)
+library(VIM)
+aggr_plot <- aggr(total, col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE, labels=names(total), cex.axis=.5, gap=1, ylab=c("Histogram of missing data","Pattern"))
+marginplot(total[c(11,10)])
+#xyplot(total,Purchase~Product_Category_2+Product_Category_3,pch=18,cex=1)
+#densityplot(total)
+library(modeest)
+mlv(total$Product_Category_2,method = "mfv",na.rm = T)[1]
+mlv(total$Product_Category_3,method = "mfv",na.rm = T)[1]
+library(Hmisc)
+#total$Product_Category_2 <- with(total,impute(Product_Category_2,8))
+#total$Product_Category_3 <- with(total,impute(Product_Category_3,16))
+#summary(total)
+total$Product_Category_2[is.na(total$Product_Category_2)] <- 8
+total$Product_Category_3[is.na(total$Product_Category_3)] <- 16
+colSums(is.na(total))
+#Count of Product_ID 
+library(dplyr)
+a <- total%>%
+  group_by(Product_ID)%>%
+  tally()
+head(a)
+names(a)[2] <- "Counter_Pr"
+total <- full_join(a,total,by="Product_ID")
+b <- total%>%
+  group_by(User_ID)%>%
+  tally()
+names(b)[2] <- "Counter_Us"
+total <- merge(b,total,by="User_ID")
+library(dummies)
+str(total)
+total <- dummy.data.frame(total,names = c("Gender","Age","Occupation","City_Category",
+                                          "Stay_In_Current_City_Years","Marital_Status"),sep=".")
+str(total)
+total <- select(total,-c(User_ID,Product_ID))
+ntrain <- total[1:nrow(btrain),]
+ntest <- total[-(1:nrow(btrain)),]
+lmod <- lm(Purchase~.,data=ntrain)
+summary(lmod)
+cor(total)
+library(corrplot)
+y <- cor(ntrain)
+corrplot(y,method = "circle",tl.cex=0.6,type = "upper")
+library(caret)
+findCorrelation(y,cutoff = 0.9)
+total <- select(total,-c(`Occupation.20`,`City_Category.C`,`Stay_In_Current_City_Years.4+`))
+ntrain <- total[1:nrow(btrain),]
+lmod <- lm(Purchase~.,data=ntrain)
+summary(lmod)
+y <- cor(ntrain)
+corrplot(y,method = "circle",tl.cex=0.6,type = "upper")
+findCorrelation(y,cutoff = 0.9,names = T)
+#simplemodel
+total <- rbind(btrain,btest)
+total$Product_Category_2 <- with(total,impute(Product_Category_2,8))
+total$Product_Category_3 <- with(total,impute(Product_Category_3,16))
+total <- select(total,-c(User_ID,Product_ID))
+ntrain <- total[1:nrow(btrain),]
+ntest <- total[-(1:nrow(btrain)),]
+lmod <- lm(Purchase~.,data=ntrain)
+summary(lmod)
+par(mfrow=c(2,2))
+plot(lmod)
+logmod <- lm(log(Purchase)~.,data = ntrain)
+summary(logmod)
+plot(logmod)
+library(Metrics)
+rmse(ntrain$Purchase,exp(logmod$fitted.values))
+#TREES
+library(rpart)
+library(rpart.plot)
+library(e1071)
+library(caret)
+train <- read.csv("train.csv")
+test <- read.csv("test.csv")
+btrain <- train[1:8523,]
+btest <- test[1:5681,]
+btest$Purchase <- 1
+total <- rbind(btrain,btest)
+str(total)
+library(Hmisc)
+library(dplyr)
+total$Product_Category_2 <- with(total,impute(Product_Category_2,8))
+total$Product_Category_3 <- with(total,impute(Product_Category_3,16))
+a <- total%>%
+  group_by(Product_ID)%>%
+  tally()
+names(a)[2] <- "Counter_Pr"
+total <- full_join(a,total,by="Product_ID")
+b <- total%>%
+  group_by(User_ID)%>%
+  tally()
+names(b)[2] <- "Counter_Us"
+total <- merge(b,total,by="User_ID")
+str(total)
+total <- select(total,-c(User_ID,Product_ID))
+ntrain <- total[1:nrow(btrain),]
+ntest <- total[-(1:nrow(btrain)),]
+control <- trainControl(method = "cv",number = 5)
+cartGrid <- expand.grid(.cp=(1:15)*0.01)
+tree <- train(Purchase~.,data=ntrain,method="rpart",trControl=control,tuneGrid=cartGrid)
+tree
+library(rattle)
+fancyRpartPlot(tree$finalModel)
+rtree <- rpart(Purchase~.,data = ntrain,control = rpart.control(cp=0.01))
+prp(rtree)
+rtree
+library(randomForest)
+control <- trainControl(method = "cv", number = 5)
+rf_model <- train(Purchase~.,data = ntrain,method="parRF",trControl=control,prox=T,allowParallel=T)
+rf_model
+formod <- randomForest(Purchase~.,data = ntrain,mtry=5,ntree=100)
+formod
+varImpPlot(formod)
+library(Metrics)
+pre_score <- predict(rtree, type = "vector")
+rmse(ntrain$Purchase, pre_score)
+pre_score <- predict(rf_model, type = "vector")
+rmse(ntrain$Purchase, pre_score)
