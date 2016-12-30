@@ -1,0 +1,168 @@
+#Complete-tutorial-learn-data-science-scratch
+#BIGMARTSALESIII
+#Variable Description
+#Item_Identifier=Unique product ID
+#Item_Weight=Weight of product
+#Item_Fat_Content=Whether the product is low fat or not
+#Item_Visibility=The % of total display area of all products in a store allocated
+#to the particular product
+#Item_Type=The category to which the product belongs
+#Item_MRP=Maximum Retail Price (list price) of the product
+#Outlet_Identifier=Unique store ID
+#Outlet_Establishment_Year=The year in which store was established
+#Outlet_Size=The size of the store in terms of ground area covered
+#Outlet_Location_Type=The type of city in which the store is located
+#Outlet_Type=Whether the outlet is just a grocery store or some sort of supermarket
+#Item_Outlet_Sales=Sales of the product in the particulat store. This is the outcome
+#variable to be predicted.
+train <- Train_UWu5bXk
+test <- Test_u94Q5KV
+str(train)
+table(is.na(train))
+colSums(is.na(train))
+summary(train)
+library(ggplot2)
+ggplot(train,aes(x=Item_Visibility,y=Item_Outlet_Sales))+
+  geom_point(size=2.5,color="navy")+ylab("Item Oulet Sales")
+ggplot(train,aes(Outlet_Identifier, Item_Outlet_Sales)) + 
+  geom_bar(stat ="identity", color ="purple") +
+  theme(axis.text.x = element_text(angle = 70, vjust = 0.5, color = "black"))+
+  ggtitle("Outlets vs Total Sales")+theme_bw()
+ggplot(train,aes(Item_Type,Item_Outlet_Sales))+geom_bar(stat="identity",color="navy")
++theme(axis.text.x = element_text(angle = 70,vjust = 0.5,color = "purple"))
++xlab("Item Type")+ylab("Item Outlet Sales")
+ggplot(train,aes(Item_Type,Item_MRP))+geom_boxplot()+ggtitle("Box Plot") 
++theme(axis.text.x = element_text(angle = 70, vjust = 0.5, color = "red")) 
++xlab("Item Type") + ylab("Item MRP") + ggtitle("Item Type vs Item MRP")
+test$Item_Outlet_Sales <- 1
+combi <- rbind(train,test)
+combi$Item_Weight[is.na(combi$Item_Weight)] <- median(combi$Item_Weight,na.rm = T)
+colSums(is.na(combi))
+table(is.na(combi$Item_Weight))
+#Trouble with Continuous Variables & Categorical Variables
+summary(combi)
+table(combi$Item_Visibility==0)
+combi$Item_Visibility <- ifelse(combi$Item_Visibility==0,
+                                median(combi$Item_Visibility),combi$Item_Visibility)
+table(combi$Item_Visibility==0)
+levels(combi$Outlet_Size)
+levels(combi$Outlet_Size)[1] <- "Other"
+levels(combi$Outlet_Size)
+library(plyr)
+levels(combi$Item_Fat_Content)
+combi$Item_Fat_Content <- revalue(combi$Item_Fat_Content,c("LF"="Low Fat","reg"=
+                                                             "Regular"))
+combi$Item_Fat_Content <- revalue(combi$Item_Fat_Content,c("low fat"="Low Fat"))
+levels(combi$Item_Fat_Content)
+summary(combi)
+#Data Manipulation in R
+#Feature Engineering=New Variables
+library(dplyr)
+a <- combi%>%
+  group_by(Outlet_Identifier)%>%
+  tally()
+names(a)[2] <- "Outlet_Count"
+combi <- full_join(a,combi,by="Outlet_Identifier")
+head(combi)
+str(combi)
+b <- combi%>%
+  group_by(Item_Identifier)%>%
+  tally()
+names(b)[2] <- "Item_Count"
+combi <- merge(b,combi,by="Item_Identifier")
+c <- combi%>%
+  select(Outlet_Establishment_Year)%>%
+  mutate(Outlet_Year=2013-combi$Outlet_Establishment_Year)
+head(c)
+combi$Outlet_Year <- 2013-combi$Outlet_Establishment_Year
+head(combi)
+q <- substr(combi$Item_Identifier,1,2)
+q <- gsub("FD","Food",q)
+q <- gsub("DR","Drinks",q)
+q <- gsub("NC","Non-Consumable",q)
+table(q)
+combi$Item_Type_New <- q
+#Hot Encoding
+combi$Item_Fat_Content <- ifelse(combi$Item_Fat_Content=="Regular",1,0)
+str(combi)
+#Converting every categorical variable to numerical using dummy variables
+table(combi$Outlet_Location_Type)
+sample <- select(combi,Outlet_Location_Type)
+demo_sample <- data.frame(model.matrix(~.-1,sample))
+head(demo_sample)
+library(dummies)
+combi <- dummy.data.frame(combi,names=c("Outlet_Size","Outlet_Location_Type",
+                                        "Outlet_Type","Item_Type_New"),sep="_")
+str(combi)
+#Item_Fat_Content
+combi <- select(combi,-c(Item_Identifier,Outlet_Identifier,Outlet_Establishment_Year,
+                         Item_Type))
+str(combi)
+new_train <- combi[1:nrow(train),]
+new_test <- combi[-(1:nrow(train)),]
+modlm <- lm(Item_Outlet_Sales~.,data = new_train)
+summary(modlm)
+cor(new_train)
+str(new_train)
+library(corrplot)
+y <- cor(new_train)
+corrplot(y,method = "number",tl.cex=0.6,type = "upper")
+#corrplot(z,method = "circle",tl.cex=0.8,type = "upper",order = "hclust",addrect = 2)
+#corrplot(z,method = "number",order = "hclust",addrect = 2)
+#corrplot(z,method = "pie",type = "upper")
+#library(caret)
+#findCorrelation(y,cutoff = 0.9,names = T)
+cor(new_train$Outlet_Count,new_train$`Outlet_Type_Grocery Store`)
+cor(new_train$Item_Type_New_Drinks,new_train$Item_Type_New_Food)
+#Let’s try to create a more robust regression model.
+train <- Train_UWu5bXk
+test <- Test_u94Q5KV
+test$Item_Outlet_Sales <- 1
+combi <- rbind(train,test)
+combi$Item_Weight[is.na(combi$Item_Weight)] <- median(combi$Item_Weight,na.rm = T)
+combi$Item_Visibility <- ifelse(combi$Item_Visibility==0, median(combi$Item_Visibility),
+                                combi$Item_Visibility)
+levels(combi$Outlet_Size)[1] <- "Other"
+library(plyr)
+combi$Item_Fat_Content <- revalue(combi$Item_Fat_Content,c("LF"="Low Fat","reg"="Regular"))
+combi$Item_Fat_Content <- revalue(combi$Item_Fat_Content,c("low fat"="Low Fat"))
+combi$Year <- 2013-combi$Outlet_Establishment_Year
+library(dplyr)
+combi <- select(combi,-c(Item_Identifier,Outlet_Identifier,Outlet_Establishment_Year))
+str(combi)
+new_train <- combi[1:nrow(train),]
+new_test <- combi[-(1:nrow(train)),]
+lmodel <- lm(Item_Outlet_Sales~.,data=new_train)
+summary(lmodel)
+par(mfrow=c(2,2))
+plot(lmodel)
+#Tackle heteroskedasticity
+logmodel <- lm(log(Item_Outlet_Sales)~.,data=new_train)
+summary(logmodel)
+plot(logmodel)
+library(Metrics)
+rmse(new_train$Item_Outlet_Sales,exp(logmodel$fitted.values))
+library(VIM)
+layout(1)
+marginplot(train[c("Item_Weight","Item_Outlet_Sales")])
+#TREES
+library(rpart)
+library(rpart.plot)
+library(e1071)
+library(caret)
+fitControl <- trainControl(method = "cv", number = 5)
+cartGrid <- expand.grid(.cp=(1:25)*0.01)
+tree_model <- train(Item_Outlet_Sales ~ ., data = new_train, method = "rpart", trControl = fitControl, tuneGrid = cartGrid)
+tree_model
+library(rattle)
+fancyRpartPlot(tree_model$finalModel)
+main_tree <- rpart(Item_Outlet_Sales ~ ., data = new_train, control = rpart.control(cp=0.01))
+prp(main_tree)
+fancyRpartPlot(main_tree)
+score <- predict(main_tree,type = "vector")
+rmse(new_train$Item_Outlet_Sales,score)
+library(randomForest)
+control <- trainControl(method = "cv",number = 5)
+rfmod <- train(Item_Outlet_Sales~.,data=new_train,method="parRF",trControl=control,prox=T,allowParallel=T)
+rfmod
+formod <- randomForest(Item_Outlet_Sales~.,data = new_train,mtry=15,ntree=100)
