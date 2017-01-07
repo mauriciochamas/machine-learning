@@ -1,0 +1,10 @@
+library(corrplot)
+library(dplyr)
+train <- Train_UWu5bXk
+str(train)
+var.corr <- subset(train,select = c(Item_Weight,Item_Visibility,Item_MRP,Item_Outlet_Sales))
+str(var.corr)
+var.corr <- rename(var.corr,Item.Weight=Item_Weight,Item.Visibility=Item_Visibility,Item.MRP=Item_MRP,Item.Outlet.Sales=Item_Outlet_Sales)
+vcor <- cor(var.corr)
+corrplot(vcor)
+corrplot(vcor, method="shade", shade.col=NA, tl.col="black", tl.srt=45,addCoef.col="black", addcolorlabel="no")
