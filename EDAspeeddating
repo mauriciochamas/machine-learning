@@ -1,0 +1,188 @@
+library(dplyr)
+library(ggplot2)
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(foreign)
+library(broom)
+library(corrgram)
+library(effects)
+library(car)
+library(caret)
+library(gridExtra)
+library(knitr)
+library(tidyr)
+path <- "C:/Users/Usuario/Documents/cursos/Data Analysis/hackathons/speed dating"
+setwd(path)
+speed <- read.csv("Speed Dating Data.csv",stringsAsFactors = F)
+#Data Cleaning
+sdd <- speed %>% filter(wave>9|wave<6)
+sdd <- sdd%>% mutate(income=as.numeric(gsub(",","",income)))%>%
+              mutate(tuition=as.numeric(gsub(",","",tuition)))
+#normalizing
+sdd <- sdd%>%mutate(sum1_1=attr1_1+sinc1_1+intel1_1+fun1_1+amb1_1+shar1_1)%>%
+mutate(attr1_1n=attr1_1/(sum1_1/100))%>%
+mutate(sinc1_1n=sinc1_1/(sum1_1/100))%>%
+mutate(intel1_1n=intel1_1/(sum1_1/100))%>%
+mutate(fun1_1n=fun1_1/(sum1_1/100))%>%
+mutate(amb1_1n=amb1_1/(sum1_1/100))%>%
+mutate(shar1_1n=shar1_1/(sum1_1/100))
+#graphs
+# Match by Number of date
+by_order <- sdd%>%
+  group_by(order)%>%
+  summarise(average=mean(match,na.rm=T))
+qplot(data = by_order, x=order, y=average, xlab="Orden de citas",ylab = "Match")+
+  geom_smooth(color=I("red"))
+# Number of dates per event
+par(mfrow=c(2:1))
+qplot(data=sdd,wave,binwidth=1,colour=I("green"),fill=I("yellow"),xlab = "Evento",
+      ylab = "Número de citas")
+# Age
+prop.table(table(sdd$gender))
+mean(sdd$age,na.rm = T)
+qplot(data=sdd,x=age,geom = "histogram",colour=I("white"),fill=I("darkred"))
+sdd=sdd%>%mutate(race_x=if_else(race==1,"African",if_else(race==2,"European",
+                  if_else(race==3,"Latino",if_else(race==4,"Asian",
+                  if_else(race==5,"Native","Other"))))))
+qplot(data = sdd,x=race_x,geom= "bar",colour=I("magenta"),fill=I("blue"))
+#field of study
+sdd=sdd%>%mutate(field_x=if_else(field_cd==1,"Law",if_else(field_cd==2,"Math",
+          if_else(field_cd==3,"Social Science",if_else(field_cd==4,"Medical Sciences",
+          if_else(field_cd==5,"Engineering ",if_else(field_cd==6,"Journalism",
+          if_else(field_cd==7,"History/Philosophy",if_else(field_cd==8,"Business",
+          if_else(field_cd==9,"Education, Academia",if_else(field_cd==10,"Physics",
+          if_else(field_cd==11,"Social Work",if_else(field_cd==12,"Undergraduate",
+          if_else(field_cd==13,"Political Science",if_else(field_cd==14,"Film",
+          if_else(field_cd==15,"Fine Arts",if_else(field_cd==16,"Languages",
+          if_else(field_cd==17,"Architecture","Others"))))))))))))))))))
+qplot(data = sdd,x=field_x,geom = "bar",colour=I("darkblue"),fill=I("blue"))+
+  theme(axis.text.x = element_text(angle = 90,hjust = 1))
+# Interest
+int <- sdd%>%
+  group_by(field_x)%>%
+  summarise(av=mean(reading,na.rm=T))
+qplot(data = int,x=field_x,y=av,xlab="Carrera",ylab = "Le gusta los deportes")+
+  theme(axis.text.x = element_text(angle = 90,hjust = 1))
+int <- sdd %>%select(51:67)%>%summarise_each(funs(mean(.,na.rm=T)))
+intl <- gather(int,interest,mean,sports:yoga,factor_key = T)%>% arrange(mean)
+intl
+ggplot(intl)+geom_bar(aes(x=interest,y=mean),stat = "identity",colour=I("white"),
+                      fill= I("red"))+theme(axis.text = element_text(angle = 90,hjust = 1))
+# Explanatory Analysis (Regression & Decision Tree)
+pos_res <- sdd %>% group_by(iid)%>%summarise(total_pos=sum(dec_o))
+tot_res <- sdd %>% group_by(iid)%>%summarise(total_res=sum(n()))
+final_pos <- tot_res %>% mutate(tot_pos_resp=pos_res$total_pos,
+                                y=(pos_res$total_pos/tot_res$total_res))
+===========================================================================
+str(final_pos)
+which.max(pos_res$total_pos)
+pos_res$iid[165]
+which.max(final_pos$y)
+final_pos$iid[353]
+sdd$gender[456]
+fivenum(final_pos$y)
+pos_res$total_pos[353]
+============================================================================
+gsdd <- sdd %>% group_by(iid,age,gender,income,exphappy,goal,go_out,date)%>%
+    summarise(y=mean(dec_o,na.rm=T),
+            attr=mean(attr_o,na.rm=T),
+            sinc=mean(sinc_o,na.rm=T),
+            intel=mean(intel_o,na.rm=T),
+            fun=mean(fun_o,na.rm=T),
+            amb=mean(amb_o,na.rm=T),
+            shar=mean(shar_o,na.rm=T),
+            cint=mean(int_corr,na.rm=T))%>%
+  rename(exph=exphappy,inc=income,male=gender,gout=go_out)
+=================
+head(gsdd)
+which.max(gsdd$y)
+gsdd$male[353]
+==================
+corrgram(gsdd,lower.panel=panel.cor,upper.panel=panel.pie,text.panel=panel.txt,main="Correlacion seis variables")
+fm1 <- "y~attr"
+mod1 <- lm(data = gsdd,y~attr)
+summary(mod1)
+fm2 <- "y~attr+shar"
+mod2 <- lm(data = gsdd,y~attr+shar)
+summary(mod2)
+fm3 <- "y~attr+fun"
+mod3 <- lm(data = gsdd,y~attr+fun)
+summary(mod3)
+fm4 <- "y~attr+shar+fun"
+mod4 <- lm(data = gsdd,y~attr+shar+fun)
+summary(mod4)
+fm5 <- "y~attr*shar*fun"
+mod5 <- lm(data = gsdd,y~attr*shar*fun)
+summary(mod5)
+fm6 <- "y~attr+shar:fun"
+mod6 <- lm(data = gsdd,y~attr+shar:fun)
+summary(mod6)
+fm99 <- "y~attr*shar:fun"
+mod99 <- lm(data = gsdd,y~attr*shar:fun)
+summary(mod99)
+fm0 <- "y~attr:shar:fun"
+mod0 <- lm(data = gsdd,y~attr:shar:fun)
+summary(mod0)
+#Anova testing of the models
+anova(mod1,mod2)
+anova(mod1,mod3)
+anova(mod1,mod4)
+anova(mod4,mod5)
+anova(mod5,mod6)
+anova(mod0,mod99)
+anova(mod5,mod99)
+anova(mod99,mod6)
+## MODEL VALIDATION: K-FOLD
+#Randomly shuffle the data
+fm <- c(fm1,fm2,fm3,fm4,fm5,fm6,fm99,fm0)
+n <- 10
+gsdd <- gsdd[sample(nrow(gsdd)),]
+folds <- cut(seq(1,nrow(gsdd)),breaks=n,labels = F )
+for(h in 1:length(fm)){
+  #Perform k-fold cross validation
+  avgRsq = 0
+  for(i in 1:n){
+    #Segement your data by fold using the which() function 
+    testIndexes <- which(folds==i,arr.ind=TRUE)
+    testData <- gsdd[testIndexes, ]
+    trainData <- gsdd[-testIndexes, ]
+    #Use the test and train data partitions however you desire...
+    mm = lm(data=filter(trainData), fm[h])
+    ybar = mean(testData$y)
+    yhat = predict(mm, newdata=testData)
+    sse=(yhat - testData$y)^2 %>% sum()
+    sst=(na.omit(ybar - testData$y))^2 %>% sum()
+    rsq=(sst-sse)/sst 
+    avgRsq = avgRsq + rsq
+  }
+  cat(n,"-folded r square: " , (avgRsq/n), " formula: ", fm[h], "\n")
+}
+## Assumption Checking 
+### Linear relation
+qplot(predict(mod6), rstandard(mod6), geom="point") + geom_hline(yintercept=0, colour=I("blue"), alpha=I(0.5))
+### Normal distribution
+q1 = qplot(rstandard(mod6), geom="blank") +
+  geom_histogram(aes(y=..density..), colour=I("gray"), binwidth=0.5)+
+  stat_function(fun=dnorm, args=list(mean=0, sd=1),
+                colour=I("red"), alpha=I(0.95))
+
+q2 = qplot(sample=rstandard(mod6)) +
+  geom_abline(slope=1,intercept=0)
+
+grid.arrange(q1, q2, nrow=1)
+### Homoscedasticity of residuals
+qplot(predict(mod6), rstandard(mod6), geom="point") + geom_hline(yintercept=0) +
+  geom_hline(yintercept=2, colour = I("red"), alpha=I(0.5)) +
+  geom_hline(yintercept=-2, colour = I("red"), alpha=I(0.5))
+
+ncvTest(mod6)
+### Independence of IVs
+durbinWatsonTest(mod6)
+### Multicolinearity
+vif(mod6)
+### Outliers
+outlierTest(mod6)
+### Influential points
+influencePlot(mod6, id.method = "identify")
+dfbetaPlots(mod6, id.method = "identify")
