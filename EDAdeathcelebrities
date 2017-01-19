@@ -1,13 +1,6 @@
 options(warn =-1 )
 library(pacman)
-p_load(dplyr,stringr,ggplot2,sqldf,extrafont,wesanderson)
-===============================
-by_order <- train%>%
-  group_by(Occupation)%>%
-  summarise(average=mean(Purchase,na.rm=T))
-qplot(data = by_order, x=Occupation, y=Purchase, xlab="Orden de citas",ylab = "Match")
-+geom_smooth(color=I("red"))
-===============================
+p_load(dplyr,stringr,ggplot2,sqldf,extrafont,wesanderson,tcltk,reshape2,gridExtra)
 #importing
 deathSet <- read.csv("C:/Users/Usuario/Documents/cursos/Data Analysis/hackathons/celebrity death/celebrity_deaths_4.csv",
                        na.strings = c("","NA"),stringsAsFactors = F) %>% tbl_df 
@@ -21,7 +14,7 @@ prop.table(table(is.na(deathSet$famous_for)))
 prop.table(table(is.na(deathSet$fame_score)))
 table(deathSet$cause_of_death)
 deathSet <- sqldf("SELECT *,
-CASE              WHEN cause_of_death LIKE '%cancer%' OR 'leukemia' THEN 'cancer'
+                  CASE              WHEN cause_of_death LIKE '%cancer%' OR 'leukemia' THEN 'cancer'
                   WHEN cause_of_death LIKE 'natural' OR '%sleep%' OR '%health%' THEN 'natural death' 
                   WHEN cause_of_death LIKE '%murder%' OR 'shot' THEN 'murder'
                   WHEN cause_of_death LIKE '%Alzheimer%' OR '%Parkinson%' THEN 'Alzheimer or Parkinson'
@@ -37,8 +30,8 @@ mode(deathSet$cause_group)
 deathSet$cause_group <- factor(deathSet$cause_group)
 table(deathSet$cause_group)
 # Theme for every plot in this project
-text_theme <- theme(text = element_text(size = 10,family = "Helvetica LT Std Light"),plot.title = element_text(hjust = 0.5))
-color_theme <- scale_fill_brewer(palette = "RdYlBu",na.value="grey90")
+text_theme <- theme(text = element_text(size = 10,family = "Verdana",face = "italic"),plot.title = element_text(hjust = 0.5))
+color_theme <- scale_fill_brewer(palette = "Spectral",na.value="black")
 deathSet$death_year <- factor(deathSet$death_year)
 ggplot(deathSet,aes(x=death_year))+geom_bar(aes(fill=cause_group),position = "stack",alpha=0.9)+text_theme+color_theme+labs(title="Causas de muerte por año",x="Año",y="Número de muertes")
 ggplot(deathSet,aes(x=death_year))+geom_bar(aes(fill=cause_group))+text_theme+color_theme+labs(title="Causas de muerte por año",x="Año",y="Número de muertes")
@@ -47,7 +40,7 @@ count(deathSet,death_year)
 by_order <- deathSet%>%
   group_by(death_year)%>%
   summarise(average=mean(age,na.rm=T))
-qplot(data = by_order, x=death_year, y=average, xlab="Año de muerte",ylab = "Edad promedio")+geom_smooth(color=I("red"))
+qplot(data = by_order, x=death_year, y=average, xlab="Año de muerte",ylab = "Edad promedio")
 ggplot(deathSet,aes(x=death_year))+geom_boxplot(aes(y=age),alpha=0.9)+text_theme+color_theme+labs(title="Edad de muerte por año",x="Año",y="Edad")
 hist(deathSet$age)
 fivenum(deathSet$age)
@@ -56,8 +49,31 @@ deathSet$name[which(deathSet$age==125)]
 #fame score
 summary(deathSet$fame_score)
 deathSet$fame_score[is.na(deathSet$fame_score)] <- median(deathSet$fame_score,na.rm = T)
-ggplot(deathSet,aes(x=fame_score))+geom_histogram(fill="skyblue",col="white")+geom_vline(aes(xintercept=median(deathSet$fame_score)),col="yellow",size=1)+labs(title="Distribución de puntaje de fama",x="Puntaje de fama",y="Frecuencia")+coord_cartesian(xlim = c(0,150))+text_theme
-library(reshape2)
+ggplot(deathSet,aes(x=fame_score))+geom_histogram(fill="skyblue",col="white")+geom_vline(aes(xintercept=median(deathSet$fame_score)),col="yellow",size=1)+labs(title="Distribución de puntaje de fama",x="Puntaje de fama",y="Frecuencia")+coord_cartesian(xlim = c(0,75))+text_theme
+# create bins
+deathSet$fame_group <- factor(findInterval(deathSet$fame_score,c(0,4,8)))
+levels(deathSet$fame_group) <- c("local","region","worldwide")
+table(deathSet$fame_group)
+color_theme2 <- scale_fill_manual(values = wes_palette(n=3,name = "GrandBudapest"))
+ggplot(deathSet,aes(x=factor(1),fill=fame_group))+geom_bar(width = 3)+color_theme2+labs(title="Distribución de muestres por grupo de fama")+text_theme
+ggplot(deathSet,aes(x=factor(1),fill=fame_group))+geom_bar(width = 3)+coord_polar(theta = "y")+labs(fill="Fame group")+labs(title="Distribución de muestres por grupo de fama",x=NULL,y=NULL)+text_theme+scale_fill_manual(values = wes_palette(n=3,name = "Zissou"))
+#Key feature: celebrity age
+summary(deathSet$age)
+hist(deathSet$age,col = "lightblue", border = "blue")
+hist(deathSet$age,col = I("lightblue"), border = I("blue"),main = NULL)
+qplot(data = deathSet,age,binwidth=10,colour=I("darkblue"),fill=I("lightblue"))
+deathSet$age[deathSet$age>109|deathSet$age<20] <- NA
+# create bins [20, 40), [40, 60) and so on
+# last bin will be a bit bigger [80, 110) to make it more realistic
+deathSet$age_group <- factor(findInterval(deathSet$age,c(20,40,60,80,100,110)))
+table(deathSet$age_group)
+levels(deathSet$age_group) <- c("20-39","40-59","60-79","80-99","100-110")
+q1=ggplot(subset(deathSet,!is.na(age_group)),aes(x=reorder(age_group,age_group,function(x)-length(x))))+geom_bar(aes(fill=fame_group),position = "dodge")+text_theme+color_theme+labs(title="Grupos de fama por edad",x="Grupos de edad",y="Número de muertes")
+q2=ggplot(subset(deathSet,!is.na(age_group)),aes(x=age_group))+geom_bar(aes(fill=fame_group))+text_theme+color_theme+labs(title="Grupos de fama por edad",x="Grupos de edad",y="Número de muertes")
+grid.arrange(q1, q2, nrow=1)
+
+
+
 #missing
 ggplot_missing <- function(x) {
   x %>% 
@@ -74,4 +90,4 @@ ggplot_missing <- function(x) {
     labs(x = "Variables in Dataset",
          y = "Rows / observations")
 }
-ggplot_missing(deathSet)
+ggplot_missing(deathSet)+scale_fill_brewer(palette = "Blues")
