@@ -1,0 +1,77 @@
+options(warn =-1 )
+library(pacman)
+p_load(dplyr,stringr,ggplot2,sqldf,extrafont,wesanderson)
+===============================
+by_order <- train%>%
+  group_by(Occupation)%>%
+  summarise(average=mean(Purchase,na.rm=T))
+qplot(data = by_order, x=Occupation, y=Purchase, xlab="Orden de citas",ylab = "Match")
++geom_smooth(color=I("red"))
+===============================
+#importing
+deathSet <- read.csv("C:/Users/Usuario/Documents/cursos/Data Analysis/hackathons/celebrity death/celebrity_deaths_4.csv",
+                       na.strings = c("","NA"),stringsAsFactors = F) %>% tbl_df 
+head(deathSet)
+str(deathSet)
+table(is.na(deathSet))
+prop.table(table(is.na(deathSet)))
+colSums(is.na(deathSet))
+prop.table(table(is.na(deathSet$cause_of_death)))
+prop.table(table(is.na(deathSet$famous_for)))
+prop.table(table(is.na(deathSet$fame_score)))
+table(deathSet$cause_of_death)
+deathSet <- sqldf("SELECT *,
+CASE              WHEN cause_of_death LIKE '%cancer%' OR 'leukemia' THEN 'cancer'
+                  WHEN cause_of_death LIKE 'natural' OR '%sleep%' OR '%health%' THEN 'natural death' 
+                  WHEN cause_of_death LIKE '%murder%' OR 'shot' THEN 'murder'
+                  WHEN cause_of_death LIKE '%Alzheimer%' OR '%Parkinson%' THEN 'Alzheimer or Parkinson'
+                  WHEN cause_of_death LIKE '%heart%' OR '%stroke%' OR '%cardiac%' THEN 'heart'
+                  WHEN cause_of_death LIKE '%suicide%' THEN 'suicide'
+                  WHEN cause_of_death LIKE '%pneumonia%' OR '%respiratory%' THEN 'pneumonia'
+                  WHEN cause_of_death LIKE '%crash%' OR '%accident%' OR '%fall%' OR '%collision%' OR '%car%' THEN 'accident'
+                  WHEN cause_of_death IS NULL THEN NULL
+                  ELSE 'other' END AS cause_group
+                  FROM deathSet")
+table(deathSet$cause_group)
+mode(deathSet$cause_group)
+deathSet$cause_group <- factor(deathSet$cause_group)
+table(deathSet$cause_group)
+# Theme for every plot in this project
+text_theme <- theme(text = element_text(size = 10,family = "Helvetica LT Std Light"),plot.title = element_text(hjust = 0.5))
+color_theme <- scale_fill_brewer(palette = "RdYlBu",na.value="grey90")
+deathSet$death_year <- factor(deathSet$death_year)
+ggplot(deathSet,aes(x=death_year))+geom_bar(aes(fill=cause_group),position = "stack",alpha=0.9)+text_theme+color_theme+labs(title="Causas de muerte por año",x="Año",y="Número de muertes")
+ggplot(deathSet,aes(x=death_year))+geom_bar(aes(fill=cause_group))+text_theme+color_theme+labs(title="Causas de muerte por año",x="Año",y="Número de muertes")
+ggplot(deathSet,aes(x=death_year))+geom_bar(aes(fill=cause_group))
+count(deathSet,death_year)
+by_order <- deathSet%>%
+  group_by(death_year)%>%
+  summarise(average=mean(age,na.rm=T))
+qplot(data = by_order, x=death_year, y=average, xlab="Año de muerte",ylab = "Edad promedio")+geom_smooth(color=I("red"))
+ggplot(deathSet,aes(x=death_year))+geom_boxplot(aes(y=age),alpha=0.9)+text_theme+color_theme+labs(title="Edad de muerte por año",x="Año",y="Edad")
+hist(deathSet$age)
+fivenum(deathSet$age)
+deathSet$name[which(deathSet$age==0)]
+deathSet$name[which(deathSet$age==125)]
+#fame score
+summary(deathSet$fame_score)
+deathSet$fame_score[is.na(deathSet$fame_score)] <- median(deathSet$fame_score,na.rm = T)
+ggplot(deathSet,aes(x=fame_score))+geom_histogram(fill="skyblue",col="white")+geom_vline(aes(xintercept=median(deathSet$fame_score)),col="yellow",size=1)+labs(title="Distribución de puntaje de fama",x="Puntaje de fama",y="Frecuencia")+coord_cartesian(xlim = c(0,150))+text_theme
+library(reshape2)
+#missing
+ggplot_missing <- function(x) {
+  x %>% 
+    is.na %>%
+    melt %>%
+    ggplot(data = .,
+           aes(x = Var2,
+               y = Var1)) +
+    geom_raster(aes(fill = value)) +
+    scale_fill_grey(name = "",
+                    labels = c("Present","Missing")) +
+    theme_minimal() + 
+    theme(axis.text.x  = element_text(angle = 45, vjust = 0.5)) + 
+    labs(x = "Variables in Dataset",
+         y = "Rows / observations")
+}
+ggplot_missing(deathSet)
