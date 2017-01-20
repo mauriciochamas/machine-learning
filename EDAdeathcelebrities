@@ -1,9 +1,8 @@
-options(warn =-1 )
 library(pacman)
 p_load(dplyr,stringr,ggplot2,sqldf,extrafont,wesanderson,tcltk,reshape2,gridExtra)
 #importing
 deathSet <- read.csv("C:/Users/Usuario/Documents/cursos/Data Analysis/hackathons/celebrity death/celebrity_deaths_4.csv",
-                       na.strings = c("","NA"),stringsAsFactors = F) %>% tbl_df 
+                     na.strings = c("","NA"),stringsAsFactors = F) %>% tbl_df 
 head(deathSet)
 str(deathSet)
 table(is.na(deathSet))
@@ -31,7 +30,7 @@ deathSet$cause_group <- factor(deathSet$cause_group)
 table(deathSet$cause_group)
 # Theme for every plot in this project
 text_theme <- theme(text = element_text(size = 10,family = "Verdana",face = "italic"),plot.title = element_text(hjust = 0.5))
-color_theme <- scale_fill_brewer(palette = "Spectral",na.value="black")
+color_theme <- scale_fill_brewer(palette = "Spectral",na.value="grey90")
 deathSet$death_year <- factor(deathSet$death_year)
 ggplot(deathSet,aes(x=death_year))+geom_bar(aes(fill=cause_group),position = "stack",alpha=0.9)+text_theme+color_theme+labs(title="Causas de muerte por año",x="Año",y="Número de muertes")
 ggplot(deathSet,aes(x=death_year))+geom_bar(aes(fill=cause_group))+text_theme+color_theme+labs(title="Causas de muerte por año",x="Año",y="Número de muertes")
@@ -71,9 +70,25 @@ levels(deathSet$age_group) <- c("20-39","40-59","60-79","80-99","100-110")
 q1=ggplot(subset(deathSet,!is.na(age_group)),aes(x=reorder(age_group,age_group,function(x)-length(x))))+geom_bar(aes(fill=fame_group),position = "dodge")+text_theme+color_theme+labs(title="Grupos de fama por edad",x="Grupos de edad",y="Número de muertes")
 q2=ggplot(subset(deathSet,!is.na(age_group)),aes(x=age_group))+geom_bar(aes(fill=fame_group))+text_theme+color_theme+labs(title="Grupos de fama por edad",x="Grupos de edad",y="Número de muertes")
 grid.arrange(q1, q2, nrow=1)
-
-
-
+# death causes for worldwide famous aged 60+
+g1 <- ggplot(deathSet%>%filter(fame_group=="worldwide"&age_group==c("60-79","80-99","100-110")),
+       aes(x=death_year))+geom_bar(aes(fill=cause_group),stat = "count")+text_theme+color_theme+
+  labs(tittle="Causas de muerte de famosos a nivel mundial",x="Grupos de edad",y="Número de muertes")
+===================================================0
+deathSet$death_month <- factor(deathSet$death_month)
+deathSet$death_month <- ordered(deathSet$death_month,month.name)
+ggplot(deathSet%>%filter(fame_group=="local"&age>=60),aes(x=death_month))+
+  geom_bar(aes(fill=cause_group),stat = "count")+color_theme
+ggplot(deathSet,aes(x=death_month))+geom_bar(aes(fill=fame_group),stat = "count")+color_theme
+===================================================1
+# death causes for worldwide famous for < 60
+g2 <- ggplot(deathSet%>%filter(fame_group=="worldwide"&age_group==c("20-39","40-59")),
+       aes(x=death_year))+geom_bar(aes(fill=cause_group),stat = "count")+text_theme+color_theme+
+  labs(tittle="Causas de muerte de famosos a nivel mundial",x="Grupos de edad",
+       y="Número de muertes")+coord_cartesian(ylim = c(0,250))
+grid.arrange(g1, g2, nrow=1)
+ggplot(subset(deathSet,!is.na(age_group)),aes(x=reorder(age_group,age_group,function(x)-
+      length(x))))+geom_bar(aes(fill=cause_group),stat = "count")+text_theme+color_theme
 #missing
 ggplot_missing <- function(x) {
   x %>% 
@@ -91,3 +106,32 @@ ggplot_missing <- function(x) {
          y = "Rows / observations")
 }
 ggplot_missing(deathSet)+scale_fill_brewer(palette = "Blues")
+####
+library(Amelia)
+missmap(deathSet)
+####
+library(reshape2)
+library(ggplot2)
+ggplot_missing2 <- function(x){
+  x %>% 
+    is.na %>%
+    melt %>%
+    ggplot(data = .,
+           aes(x = Var2,
+               y = Var1)) +
+    geom_raster(aes(fill = value)) +
+    scale_fill_grey(name = "",
+                    labels = c("Present","Missing")) +
+    theme_minimal() + 
+    theme(axis.text.x  = element_text(angle=45, vjust=0.5)) + 
+    labs(x = "Variables in Dataset",
+         y = "Rows / observations")
+}
+ggplot_missing2(deathSet)
+#cause of death
+ggplot(deathSet%>%filter(deathSet$fame_group=="worldwide"),aes(x=reorder(cause_group,
+  cause_group,function(x)length(x))))+geom_bar(aes(fill=cause_group),stat = "count")+
+  text_theme+color_theme+coord_flip()+guides(fill=F)
+#en porcentaje
+ggplot(deathSet,aes(x=reorder(cause_group,cause_group,function(x)length(x))))+geom_bar(aes(y = (..count..)/sum(..count..),
+fill=cause_group))+color_theme+coord_flip()
