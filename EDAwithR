@@ -1,0 +1,81 @@
+library(pacman)
+p_load(readr, dplyr,lubridate)
+#carbon <- read_csv("C:/Users/Usuario/Documents/cursos/Data Analysis/hourly_42101_2014.csv",col_types = "ccccinnccccccnncccccc")
+carbon <- read_csv("C:/Users/Usuario/Documents/cursos/Data Analysis/hourly_42101_2014.csv",col_types = cols(.default = "c"))
+str(carbon)
+names(carbon)
+head(carbon[,c(6 ,7, 10)])
+tail(carbon[,c(1, 2, 3, 4, 6, 7, 10)])
+table(carbon$`State Code`)
+table(carbon$`Time Local`)
+colnames(carbon) <- gsub(" ",".",names(carbon))
+colnames(carbon) <- gsub('([[:punct:]])|\\s+','.',colnames(carbon))
+colnames(carbon) <- tolower(colnames(carbon))
+colnames(carbon)
+car <- carbon
+filter(carbon, time.local=="03:00")%>%
+      select(state.code, county.code, date.local, time.local, sample.measurement)
+filter(carbon, time.local=="03:00")%>%
+  select(1, 2, 10, 11, 14)
+filter(carbon,state.code== "36"
+       & county.code == "029"
+       & date.local == "2014-09-30") %>%
+  select(date.local, time.local, sample.measurement) %>%
+  as.data.frame
+select(carbon,state.code) %>% unique %>% nrow
+unique(carbon$state.code)
+carbon$sample.measurement <- as.numeric(carbon$sample.measurement)
+summary(carbon$sample.measurement)
+quantile(carbon$sample.measurement,seq(0,1,0.1))
+#the easy solution first
+#which counties in the United States have the highest levels of ambient CO pollution?
+g <- sapply(split(carbon$sample.measurement,carbon$state.name),mean,na.rm=T) %>%
+  as.data.frame
+g$state.name <- rownames(g)
+g<- rename(g, promedio = .)
+g <- g[,c(2,1)]
+ranking2 <- arrange(g,desc(promedio))
+head(ranking2)
+ranking <- group_by(carbon, state.name) %>%
+  summarise(promedio = mean(sample.measurement, rm.na=T)) %>%
+  as.data.frame %>%
+  arrange(desc(promedio))
+head(ranking)
+ranking3 <- group_by(carbon, state.name, county.name) %>%
+  summarise(promedio = mean(sample.measurement)) %>%
+  as.data.frame %>%
+  arrange(desc(promedio))
+head(ranking3)
+tail(ranking3)
+#cuantas observaciones tiene county San Juan de Puerto Rico
+filter(carbon,state.name == "Puerto Rico" & county.name == "San Juan")%>% nrow
+filter(carbon, county.name == "San Juan")%>% nrow
+# convertir la columna de fecha al formato Date
+#carbon$date.local <- car$date.local
+carbon$month <- month(ymd(carbon$date.local),label=T,abbr = F)
+max <- filter(carbon, county.name == "San Juan") %>%
+  group_by(month) %>%
+  summarise(promedio = mean(sample.measurement, rm.na=T))
+g <- filter(carbon, county.name == "San Juan")
+sapply(split(g$sample.measurement, g$month), mean, na.rm=T)
+min <- filter(carbon, county.name == "Berks") %>%
+  group_by(month) %>%
+  summarise(promedio = mean(sample.measurement, rm.na=T))
+total <- rename(max,maximo=promedio)
+total$minimo <- min$promedio
+total <- mutate(total,diferencia=maximo-minimo)
+total
+set.seed(101234)
+N <- nrow(carbon)
+idx <- sample(N, N, replace = T)
+carbon2 <- carbon[idx,]
+rankingb <- group_by(carbon2, state.name, county.name) %>%
+  summarise(promediob = mean(sample.measurement)) %>%
+  as.data.frame %>%
+  arrange(desc(promediob))
+head(rankingb)
+head(ranking3)
+cbind(head(ranking3, 10), head(rankingb, 10))
+estabilidad <- cbind(tail(ranking3[,1:2], 10), tail(rankingb[,1:2], 10))
+names(estabilidad) <- c("state A", "county A", "state B", "county B")
+estabilidad
