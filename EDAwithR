@@ -1,3 +1,6 @@
+=============================
+        EDA Checklist
+=============================
 library(pacman)
 p_load(readr, dplyr,lubridate)
 #carbon <- read_csv("C:/Users/Usuario/Documents/cursos/Data Analysis/hourly_42101_2014.csv",col_types = "ccccinnccccccnncccccc")
@@ -35,7 +38,10 @@ g$state.name <- rownames(g)
 g<- rename(g, promedio = .)
 g <- g[,c(2,1)]
 ranking2 <- arrange(g,desc(promedio))
-head(ranking2)
+q <- head(ranking2,10)
+with(q, plot(promedio,state.name, type = "h", col = c(1:10))
+with(ranking2, barplot(state.name,promedio))
+table(ranking2$promedio) %>% barplot(col = "red")
 ranking <- group_by(carbon, state.name) %>%
   summarise(promedio = mean(sample.measurement, rm.na=T)) %>%
   as.data.frame %>%
@@ -79,3 +85,59 @@ cbind(head(ranking3, 10), head(rankingb, 10))
 estabilidad <- cbind(tail(ranking3[,1:2], 10), tail(rankingb[,1:2], 10))
 names(estabilidad) <- c("state A", "county A", "state B", "county B")
 estabilidad
+=============================
+  Exploratory Graphs
+=============================
+library(pacman,maps)
+p_load(dplyr)
+pollution <- read.csv("C:/Users/Usuario/Documents/cursos/Data Analysis/hackathons/avgpm25.csv",colClasses = c("numeric","character", "factor", "numeric", "numeric"))
+str(pollution)
+head(pollution)
+sapply(split(pollution$pm25,pollution$region),mean)
+#NAs
+table(is.na(pollution))
+prop.table(table(is.na(pollution)))
+colSums(is.na(pollution))
+fivenum(pollution$pm25)
+summary(pollution)
+#Numerical
+boxplot(pollution$pm25,col = "blue")
+abline(h = 12)
+filter(pollution,pm25>15)
+map("county","california")
+with(filter(pollution,pm25 > 15), points(longitude, latitude))
+hist(pollution$pm25, col = "green")
+rug(pollution$pm25)
+abline(v = 12, lwd = 3)
+abline(v = median(pollution$pm25), col = "darkblue", lwd = 3)
+#Categorical
+table(pollution$region) %>% barplot(col = "lightblue")
+barplot(pollution$region)
+boxplot(pm25~region, data = pollution, col = "tomato")
+#multiple histogram
+par(mfrow = c(2,1), mar = c(4, 4, 2, 1))
+hist(subset(pollution, region = "east")$pm25, col = "green", breaks = 100)
+hist(subset(pollution, region = "west")$pm25, col = "green")
+layout(1)
+#scatterplots
+with(pollution, plot(latitude, pm25))
+abline(h = 12, lwd = 2, lty = 4)
+#scatterplots using color
+with(pollution, plot(latitude, pm25, col = region))
+levels(pollution$region)
+#el que aparece primero es el negro, col = 1
+abline(h = 12, lwd = 2, lty = 4)
+rm(col)
+#multiple scatter plots
+par(mfrow = c(1,2), mar = c(5, 4, 2, 1))
+with(subset(pollution, region == "west"), plot(latitude, pm25, main = "West"))
+with(subset(pollution, region == "east"), plot(latitude, pm25, main = "East"))
+with(subset(pollution, region == "west"), plot(longitude, pm25, main = "West"))
+with(subset(pollution, region == "east"), plot(longitude, pm25, main = "East"))
+layout(1)
+##latice
+library(lattice)
+xyplot(pm25 ~ latitude | region, data = pollution)
+##ggplot
+library(ggplot2)
+qplot(latitude, pm25, data = pollution, facets = .~region)
