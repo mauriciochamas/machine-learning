@@ -213,3 +213,93 @@ with(air, {
   plot(Temp, Ozone, main = "Ozone and Temp")
   mtext("Ozone in NYC", outer = T)
 })
+============================
+  ggplot2
+============================
+library(ggplot2)
+ggplot(airquality, aes(Temp, Ozone)) + geom_point() + 
+  geom_smooth(method = "loess", se = T)
+head(airquality[, c(4, 1)])
+ggplot(airquality, aes(Temp, Ozone)) + geom_area()
+ggplot(airquality, aes(Temp, Ozone)) + geom_bin2d()
+ggplot(airquality, aes(Temp, Ozone)) + geom_blank()
+ggplot(airquality, aes(Temp, Ozone)) + geom_boxplot()
+ggplot(airquality, aes(Temp, Ozone)) + geom_col()
+ggplot(airquality, aes(Temp, Ozone)) + geom_density_2d()
+ggplot(airquality, aes(Temp, Ozone)) + geom_dotplot()
+ggplot(airquality, aes(Temp, Ozone)) + geom_smooth()
+#the basics
+str(mpg)
+names(mpg)
+#El desplazamiento de motor de alta dará lugar generalmente a un bajo 
+# consumo de combustible.
+qplot(displ, hwy, data = mpg, color = drv)
+qplot(displ, hwy, data = mpg, geom = c("point", "smooth"))
+qplot(hwy, data = mpg, fill = drv, binwidth = 1)
+qplot(hwy, data = mpg, bins = 300)
+qplot(hwy, data = mpg, binwidth = 1)
+qplot(drv, hwy, data = mpg, geom = "boxplot")
+qplot(hwy, data = mpg, geom = "boxplot")
+qplot(hwy, data = mpg, facets = drv ~., binwidth = 1)
+qplot(displ, hwy, data = mpg, facets = .~drv) + geom_smooth(method = "loess")
+qplot(displ, hwy, data = mpg, facets = .~drv, geom = c("point", "smooth"))
+#Case Study
+#manufacturer <- model
+#model <- name
+#displ <- engine displacement, in litres
+#year <- year of manufacture
+#cyl <- number of cylinders
+#trans <- type of transmission
+#drv <- f = front-wheel drive, r = rear wheel drive, 4 = 4wd
+#cty <- city miles per gallon
+#hwy <- highway miles per gallon
+#fl <- fuel type
+#class <- "type" of car
+========================
+mpg <- mpg
+str(mpg)
+#histogram
+qplot(hwy, data = mpg, bins = 15)
+qplot(log(hwy), data = mpg, bins = 15, facets = .~drv)
+qplot(log(hwy), data = mpg, geom = "density")
+qplot(hwy, data = mpg, geom = "density")
+qplot(hwy, data = mpg, geom = "density", color = year)
+qplot(hwy, cty, data = mpg, geom = c("point", "smooth"))
+qplot(hwy, cty, data = mpg) + geom_smooth()
+qplot(hwy, cty, data = mpg, shape = drv)
+qplot(hwy, cty, data = mpg, color = drv)
+qplot(hwy, cty, data = mpg, color = drv) + geom_smooth(method = "lm")
+table(mpg$drv)
+qplot(hwy, cty, data = mpg, facets = .~year) + geom_smooth(method = "lm")
+qplot(hwy, data = mpg, geom = "bar")
+qplot(hwy, cty, data = mpg, geom = "jitter")
+qplot(hwy, cty, data = mpg, geom = c("jitter", "smooth"))
+qplot(hwy, cty, data = mpg, geom = c("point", "smooth"))
+qplot(hwy, cty, data = mpg, geom = "boxplot")
+qplot(hwy, cty, data = mpg, geom = "line")
+str(mpg)
+g <- ggplot(mpg, aes(hwy, cty))
+summary(g)
+class(g)
+g + geom_point()
+g + geom_smooth(method = "lm") + geom_point() + facet_grid(.~drv) + theme_minimal()
+g + geom_smooth(method = "lm") + geom_point(color = "steelblue", size = 4, alpha = 0.5)
+  + facet_grid(.~drv) + theme_minimal()
+g + geom_smooth(method = "lm") + geom_point(aes(color = drv), size = 4, alpha = 0.5)
++ facet_grid(.~drv) + theme_minimal()
+g + geom_point(aes(color = drv)) + labs(tittle = "MPG") + labs(x = "Highway per galon", y = "City per galon")
+g + geom_point() + geom_smooth(size = 4, linetype = 3, method = "lm", se = F)
+g + geom_point() + theme_bw(base_family = "Times")
+str(mpg)
+table(mpg$manufacturer)
+qq <- quantile(mpg$hwy, seq(0,1, length = 5), na.rm = TRUE)
+mpg$hwyqq <- cut(mpg$hwy, qq, include.lowest = T)
+g <- ggplot(mpg, aes(displ, cty))
+g + geom_point(alpha = 0.3) + facet_wrap(class ~ hwyqq, nrow = 5, ncol = 5)
+g + geom_point(alpha = 0.3) + facet_grid(class ~ hwyqq)
+#axis limits
+testdat <- data.frame(x=1:100, y = rnorm(100))
+testdat[50,2] <- 100 ##outlier!
+qplot(x, y, data = testdat, geom = "line", ylim = c(-5,5))
+ggplot(testdat, aes(x,y)) + geom_line() + ylim(-3,3)
+ggplot(testdat, aes(x,y)) + geom_line() + coord_cartesian(ylim = c(-3,3))
