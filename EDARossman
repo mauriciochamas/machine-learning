@@ -1,0 +1,117 @@
+library(data.table)
+library(zoo)
+library(forecast)
+library(ggplot2)
+test <- fread("C:/Users/Usuario/Documents/cursos/Data Analysis/hackathons/rossmann/test.csv")
+train <- fread("C:/Users/Usuario/Documents/cursos/Data Analysis/hackathons/rossmann/train.csv")
+store <- fread("C:/Users/Usuario/Documents/cursos/Data Analysis/hackathons/rossmann/store.csv")
+str(train)
+str(test)
+str(store)
+train[, Date := as.Date(Date)]
+test[, Date := as.Date(Date)]
+train <- train[order(Date)]
+test <- test[order(Date)]
+summary(train)
+summary(test)
+table(test$Store)
+colSums(is.na(test))
+test[is.na(test$Open)]
+test$Open[test$Store == 622]
+#input NAs
+test[is.na(test)] <- 1
+test$Open[is.na(test$Open)] <- 1
+#unique values
+train[, lapply(.SD, function(x) length(unique(x)))]
+test[, lapply(.SD, function(x) length(unique(x)))]
+#codigo Store que coincide entre test y train
+sum(unique(test$Store) %in% unique(train$Store))
+sum(!(unique(train$Store)) %in% unique(test$Store))
+#codigo Store que NO coincide entre test y train
+sum(!(unique(train$Store) %in% unique(test$Store)))
+table(train$Open)/nrow(train)
+table(test$Open)/nrow(test)
+table(train$Promo)/nrow(train)
+table(test$Promo)/nrow(test)
+table(train$StateHoliday)/nrow(train)
+table(test$StateHoliday)/nrow(test)
+table(train$SchoolHoliday)/nrow(train)
+table(test$SchoolHoliday)/nrow(test)
+plot(train$Date, type = "l")
+plot(test$Date, type = "l")
+table(train$Date) == 1115
+all(table(train$Date) == 1115)
+unique(table(train$Date)== 1115)
+unique(table(train$Date))
+which(table(train$Date) == 1114)
+sum(which(table(train$Date) == 1114))
+which(table(train$Date) == 935)
+sum(which(table(train$Date) == 935))
+sum(which(table(train$Date) == 1115))
+table(test$Date)
+table(test$Date)==856
+all(table(test$Date) == 856)
+hist(train$Sales, 100)
+hist(aggregate(train[Sales != 0]$Sales, 
+               by = list(train[Sales != 0]$Store), mean)$x, 100,
+     main = "Mean sales per store when store was not close")
+table(train[Sales != 0]$Sales)
+aggregate(train[Sales != 0]$Sales, by = list(train[Sales != 0]$Store), mean)
+hist(train$Customers, 100)
+hist(aggregate(train[Sales != 0]$Customers,
+               by = list(train[Sales != 0]$Store), mean)$x, 100,
+     main = "Mean customers per store when store was not closed")
+ggplot(train[Sales != 0], aes(x = factor(SchoolHoliday), y = Sales))+
+  geom_jitter(alpha = 0.1) +
+  geom_boxplot(color = "yellow", outlier.colour = NA, fill = NA)
+ggplot(train[train$Sales != 0 & train$Customers != 0],
+       aes(x = log(Customers), y = log(Sales))) + geom_point(alpha = 0.2)+
+  geom_smooth()
+ggplot(train[train$Sales != 0 & train$Customers != 0],
+        aes(x = factor(Promo), y = Sales)) +
+        geom_jitter(alpha = 0.1) + 
+        geom_boxplot(color = "yellow", outlier.colour = NA, fill = NA)
+ggplot(train[train$Sales != 0 & train$Customers != 0],
+        aes(x = factor(Promo), y = Customers)) +
+        geom_jitter(alpha = 0.1) +
+        geom_boxplot(color = "yellow", outlier.colour = NA, fill = NA)
+head(train[train$Sales != 0 & train$Customers != 0])
+head(train[train$Sales == 0 & train$Customers == 0 & train$Open == 1])
+dim(train[train$Sales == 0 & train$Customers == 0 & train$Open == 1])
+with(train, qplot(Sales, Customers, geom = "point", color = DayOfWeek))
+with(train[train$Sales != 0 & train$Promo == 0], mean(Sales/Customers))
+with(train[train$Sales != 0 & train$Promo == 1], mean(Sales/Customers))
+sapply(split(train[train$Sales > 0]$Sales, train[train$Sales > 0]$Promo), mean)/sapply(split(train[train$Sales > 0]$Customers, train[train$Sales > 0]$Promo), mean)
+with(train[train$Sales != 0 & train$Promo == 0], mean(Sales/Customers))
+sapply(split(train$Sales, train$Promo), mean)/sapply(split(train$Customers, train$Promo), mean)
+table(ifelse(train$Sales != 0, "Sales > 0", "Sales = 0"),
+      ifelse(train$Promo, "Promo", "No promo"))
+table(ifelse(train$Open == 1, "Opened", "Closed"), 
+      ifelse(train$Sales != 0, "Sales > 0", "Sales = 0") )
+train[train$Open == 1 & train$Sales != 0]
+train[Open == 1 & Sales == 0 & Customers != 0]
+zeroPerStore <- sort(tapply(train$Sales, train$Store, function(x) sum(x == 0)))
+table(train$Sales==0&train$Open==1)
+table(zeroPerStore)
+hist(zeroPerStore, 100)
+sum(zeroPerStore)
+head(zeroPerStore, 10)
+tail(zeroPerStore, 10)
+plot(train[Store==708, Sales], ylab = "Sales", xlab = "Days", main = "Store 708")
+plot(train[Store==103, Sales], ylab = "Sales", xlab = "Days", main = "Store 103")
+library(ggplot2)
+qplot(Date, Sales, data = train[Store == 708], geom = "point")
+qplot(Date, Sales, data = train[Store == 972], geom = "point", main = "Store 972")
+ggplot(train[Store == 972], aes(Date, Sales)) + geom_point(aes(color = DayOfWeek))+
+  facet_grid(.~Promo)
+ggplot(train[Store == 85], aes(Date, Sales, color = DayOfWeek == 7))+
+  geom_point(size = 1) + ggtitle("Ventas de la tienda 85 (Domingo Azul)")
+ggplot(train[Store == 262], aes(Date, Sales, color = DayOfWeek == 7, 
+       shape = DayOfWeek == 7)) + geom_point(alpha = 0.5, size = 3) + ggtitle("Ventas tienda 262 (Domingo Azul)")
+ggplot(train[Store == 262], aes(Date, Sales, color = Promo)) +
+  geom_bar(stat = "identity")
+ggplot(train[Sales != 0], aes(DayOfWeek, Sales)) + geom_jitter(alpha = 0.1) +
+  geom_boxplot(color = "yellow", outlier.colour = NA, fill = NA)
+ggplot(train[Sales != 0], aes(DayOfWeek, Sales)) + geom_bar(stat = "identity") +
+  geom_boxplot(color = "yellow", outlier.colour = NA, fill = NA)
+summ
