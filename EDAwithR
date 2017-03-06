@@ -213,3 +213,14 @@ with(air, {
   plot(Temp, Ozone, main = "Ozone and Temp")
   mtext("Ozone in NYC", outer = T)
 })
+========================================
+grafico dos variables
+========================================
+###
+plot(g$year, g$victim.age, type = "l", col = "red", ylab = "Age", xlab = "Year")
+par(new = T)
+plot(g$year, g$perpetrator.age, type = "l", col = "green", ylab = "Age", xlab = "Year")
+###
+ggplot(g, aes(year, group = 1)) + 
+  geom_line(aes(y = victim.age), colour = "red") +
+  geom_line(aes(y = perpetrator.age), colour = "blue") + labs(y = "Age")
