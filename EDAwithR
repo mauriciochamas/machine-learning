@@ -224,3 +224,12 @@ plot(g$year, g$perpetrator.age, type = "l", col = "green", ylab = "Age", xlab = 
 ggplot(g, aes(year, group = 1)) + 
   geom_line(aes(y = victim.age), colour = "red") +
   geom_line(aes(y = perpetrator.age), colour = "blue") + labs(y = "Age")
+=======================
+Clasificar variable
+=======================
+homi.sol$who.killed.who <- ifelse(homi.sol$relationship == "Brother" & homi.sol$perpetrator.sex == "Male", "Brother Killed by Brother",
+                                  ifelse(homi.sol$relationship == "Brother" & homi.sol$perpetrator.sex == "Female", "Brother Killed by Sister",
+                                         ifelse(homi.sol$relationship == "Sister" & homi.sol$perpetrator.sex == "Male", "Sister Killed by Brother",
+                                                ifelse(homi.sol$relationship == "Sister" & homi.sol$perpetrator.sex == "Female", "Sister Killed by Sister",
+                                                       ifelse(homi.sol$relationship == "Father" & homi.sol$perpetrator.sex == "Female", "Father Killed by Daughter", "UKN"
+                                                              )))))
